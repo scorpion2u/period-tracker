@@ -672,7 +672,7 @@
             <div class="selected-amount" id="selectedDateInfo">📝 无备注</div>
         </div>
         <div class="tip-banner">
-            💡 单击日期 → 选择操作 | 🔮 紫色虚线为系统智能预测
+            💡经期预测功能必须有两个月的经期记录，日历上的紫色虚线为预测日。
         </div>
     </div>
 
@@ -883,7 +883,7 @@
     }
     
     function renderEntriesForDate(dateStr) { let { note } = getDayStats(dateStr); let listUl = document.getElementById('entriesList'); if(!note) { listUl.innerHTML = `<li class="empty-state">✨ 单击日期添加备注</li>`; return; } let html = `<li><div class="entry-info"><div class="entry-note">📝 ${escapeHtml(note)}</div><div class="entry-time">${dateStr}</div></div><div class="entry-actions"><span class="edit-btn">✏️</span><span class="delete-btn">🗑️</span></div></li>`; listUl.innerHTML = html; listUl.querySelector('.edit-btn').onclick = () => { let newNote = prompt('修改备注内容', note); if(newNote !== null) { let [y,m,d] = selectedDate.split('-'); setDayNote(parseInt(y), parseInt(m)-1, parseInt(d), newNote); } }; listUl.querySelector('.delete-btn').onclick = () => { let [y,m,d] = selectedDate.split('-'); setDayNote(parseInt(y), parseInt(m)-1, parseInt(d), ''); }; }
-    function updateSelectedInfo() { let { isPeriod, note } = getDayStats(selectedDate); let label = document.getElementById('selectedDateLabel'); let info = document.getElementById('selectedDateInfo'); let dateObj = new Date(selectedDate); let weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']; let weekday = weekdays[dateObj.getDay()]; label.innerText = isPeriod ? `🌸 经期 · ${selectedDate} ${weekday}` : `📅 ${selectedDate} ${weekday}`; if(note) info.innerHTML = `📝 ${note}`; else info.innerHTML = isPeriod ? ' ' : '✨ 单击日期选择操作'; }
+    function updateSelectedInfo() { let { isPeriod, note } = getDayStats(selectedDate); let label = document.getElementById('selectedDateLabel'); let info = document.getElementById('selectedDateInfo'); let dateObj = new Date(selectedDate); let weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']; let weekday = weekdays[dateObj.getDay()]; label.innerText = isPeriod ? `🌸 经期 · ${selectedDate} ${weekday}` : `📅 ${selectedDate} ${weekday}`; if(note) info.innerHTML = `📝 ${note}`; else info.innerHTML = isPeriod ? ' ' : ''; }
     function changeMonth(delta) { currentMonth += delta; if(currentMonth < 0) { currentMonth = 11; currentYear--; } if(currentMonth > 11) { currentMonth = 0; currentYear++; } let maxDay = new Date(currentYear, currentMonth+1, 0).getDate(); let curDay = Math.min(parseInt(selectedDate.split('-')[2]), maxDay); selectedDate = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(curDay).padStart(2,'0')}`; renderCalendar(); }
     function bindGestures() { let area = document.getElementById('calendarTouchArea'); area.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }); area.addEventListener('touchend', (e) => { let diff = e.changedTouches[0].screenX - touchStartX; if(Math.abs(diff) > 50) changeMonth(diff > 0 ? -1 : 1); }); }
     
