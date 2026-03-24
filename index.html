@@ -1,0 +1,1116 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>🌸 月悦记 · 经期小助手</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --card-radius: 20px;
+            --card-padding: 12px;
+            --stat-padding: 8px;
+            --input-padding: 8px;
+            --font-size-base: 15px;
+            --expense-color: #e46b5a;
+            --income-color: #b5838a;
+            --predict-color: #9b6b9e;
+            --spacing-gap: 8px;
+            --bg-color: #fff5f0;
+            --card-bg: #ffffff;
+            --focus-color: #e46b5a;
+            --text-primary: #4a2a2a;
+            --text-secondary: #a07a6a;
+            --border-light: #ffe0d4;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', system-ui, sans-serif;
+            background: var(--bg-color);
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 550px;
+            width: 100%;
+            margin: 0 auto;
+            padding-bottom: 20px;
+        }
+
+        .stat-card, .calendar-card, .list-card, .date-header {
+            background: var(--card-bg);
+            border-radius: var(--card-radius);
+            border: 1px solid var(--border-light);
+            margin-bottom: var(--spacing-gap);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+        }
+
+        /* 动画装饰卡片 */
+        .deco-card {
+            background: linear-gradient(135deg, rgba(228, 107, 90, 0.08), rgba(181, 131, 138, 0.08));
+            border-radius: var(--card-radius);
+            padding: 12px 16px;
+            margin-bottom: var(--spacing-gap);
+            border: 1px solid rgba(228, 107, 90, 0.2);
+            position: relative;
+            z-index: 1;
+            overflow: visible;
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        
+        .sakura-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            border-radius: var(--card-radius);
+        }
+        
+        .today-status {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+        
+        .status-icon {
+            font-size: 32px;
+            animation: gentleBounce 3s ease-in-out infinite;
+        }
+        
+        @keyframes gentleBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        
+        .status-text {
+            flex: 1;
+        }
+        
+        .status-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--expense-color);
+            margin-bottom: 4px;
+        }
+        
+        .status-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        .menu-container {
+            position: relative;
+            z-index: 10;
+        }
+        
+        .menu-button {
+            width: 36px;
+            height: 36px;
+            background: rgba(228, 107, 90, 0.2);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.2s;
+            color: var(--expense-color);
+            font-weight: 500;
+            position: relative;
+            z-index: 11;
+        }
+        
+        .menu-button:active { 
+            transform: scale(0.94);
+            background: rgba(228, 107, 90, 0.35);
+        }
+        
+        .menu-dropdown {
+            position: fixed;
+            width: 220px;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.08);
+            overflow: hidden;
+            z-index: 99999;
+            display: none;
+            backdrop-filter: none;
+            opacity: 1;
+            animation: menuFadeIn 0.18s ease;
+        }
+        
+        @keyframes menuFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .menu-dropdown.show { 
+            display: block;
+        }
+        
+        .menu-item {
+            padding: 14px 16px;
+            font-size: 15px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: background 0.15s;
+            cursor: pointer;
+        }
+        
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+        
+        .menu-item:active {
+            background: rgba(0,0,0,0.06);
+        }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 10px 4px;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .stat-number {
+            font-size: 16px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-primary);
+        }
+        .stat-card.period .stat-number { color: var(--expense-color); }
+        .stat-card.cycle .stat-number { color: var(--income-color); }
+        .stat-card.predict .stat-number { color: var(--predict-color); font-size: 14px; }
+
+        .date-header {
+            padding: 10px 12px;
+        }
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .nav-btn {
+            background: rgba(0,0,0,0.05);
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 34px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.1s;
+        }
+        .nav-btn:active { transform: scale(0.94); background: rgba(0,0,0,0.1); }
+        #currentYearMonthDisplay {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-primary);
+            background: rgba(0,0,0,0.03);
+            padding: 4px 14px;
+            border-radius: 34px;
+        }
+        .selected-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .selected-label {
+            font-size: 11px;
+            background: rgba(0,0,0,0.05);
+            padding: 3px 10px;
+            border-radius: 30px;
+            color: var(--text-secondary);
+        }
+        .selected-amount {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .tip-banner {
+            background: rgba(228, 107, 90, 0.1);
+            border-radius: 20px;
+            padding: 4px 8px;
+            font-size: 10px;
+            color: var(--expense-color);
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        .calendar-card {
+            padding: 10px;
+        }
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            margin-bottom: 5px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.02);
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 13px;
+            border: 1px solid transparent;
+            transition: all 0.1s;
+            position: relative;
+            min-height: 42px;
+        }
+        .calendar-day:active { transform: scale(0.96); }
+        .calendar-day.other-month { opacity: 0.4; background: transparent; }
+        .calendar-day.today {
+            border: 2px solid var(--expense-color);
+            background: rgba(228, 107, 90, 0.1);
+        }
+        .calendar-day.selected {
+            border: 2px solid #b5838a;
+            background: rgba(181, 131, 138, 0.15);
+        }
+        .calendar-day.predict {
+            background: rgba(155, 107, 158, 0.1);
+            border: 1px dashed var(--predict-color);
+        }
+        .day-number {
+            font-weight: 500;
+            font-size: 13px;
+        }
+        .period-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--expense-color);
+            border-radius: 10px;
+            margin-top: 2px;
+        }
+        .predict-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--predict-color);
+            border-radius: 10px;
+            margin-top: 2px;
+            opacity: 0.7;
+        }
+        .day-note {
+            font-size: 8px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0 2px;
+        }
+
+        .list-card {
+            padding: 10px 12px;
+            margin-bottom: 0;
+        }
+        .entries-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .entries-header h4 { 
+            font-size: 13px; 
+            font-weight: 600; 
+        }
+        .entries-list { 
+            list-style: none; 
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .entries-list li {
+            background: rgba(0,0,0,0.02);
+            border-radius: 14px;
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border-light);
+        }
+        .entry-info { flex: 1; }
+        .entry-note { 
+            font-weight: 500; 
+            font-size: 12px; 
+        }
+        .entry-time { 
+            font-size: 9px; 
+            color: var(--text-secondary); 
+            margin-top: 2px; 
+        }
+        .entry-actions { display: flex; gap: 8px; align-items: center; }
+        .edit-btn, .delete-btn { 
+            cursor: pointer; 
+            font-size: 13px; 
+            opacity: 0.6; 
+            padding: 3px;
+        }
+        .empty-state { 
+            text-align: center; 
+            color: var(--text-secondary); 
+            padding: 20px; 
+            font-size: 11px; 
+        }
+
+        .action-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border-radius: 24px 24px 0 0;
+            padding: 16px 20px 24px;
+            animation: slideUp 0.3s ease;
+            z-index: 1001;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            border-top: 1px solid var(--border-light);
+        }
+        .action-sheet-title {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-light);
+            margin-bottom: 12px;
+        }
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 40px;
+            transition: all 0.1s;
+            margin-bottom: 8px;
+        }
+        .action-btn.primary {
+            background: var(--expense-color);
+            color: white;
+        }
+        .action-btn.secondary {
+            background: rgba(0,0,0,0.05);
+            color: var(--text-primary);
+        }
+        .action-btn.danger {
+            color: var(--expense-color);
+        }
+        .action-btn:active { transform: scale(0.98); opacity: 0.8; }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(3px);
+        }
+        .settings-panel, .edit-panel, .category-manager, .knowledge-panel {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 20px;
+            width: 90%;
+            max-width: 380px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            border: 1px solid var(--border-light);
+        }
+        .knowledge-panel h3 {
+            margin-bottom: 16px;
+            color: var(--expense-color);
+            font-size: 1.2rem;
+        }
+        .knowledge-section {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .knowledge-section h4 {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .knowledge-section p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 6px;
+        }
+        .knowledge-tip {
+            background: rgba(228, 107, 90, 0.1);
+            padding: 8px 12px;
+            border-radius: 16px;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: var(--expense-color);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c2c2c;
+            color: white;
+            padding: 5px 14px;
+            border-radius: 30px;
+            font-size: 11px;
+            z-index: 1100;
+            animation: fadeInOut 2s ease;
+            white-space: nowrap;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+        }
+        
+        .settings-item {
+            margin-bottom: 14px;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 10px;
+        }
+        .settings-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: block;
+            color: var(--text-primary);
+        }
+        .theme-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .theme-btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 5px;
+            border-radius: 30px;
+            border: none;
+            background: rgba(0,0,0,0.05);
+            font-size: 0.65rem;
+            cursor: pointer;
+        }
+        .hsl-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 5px;
+        }
+        .hsl-sub-label { width: 40px; font-size: 0.65rem; }
+        input[type="range"] { flex: 1; }
+        .color-preview-block {
+            width: 28px;
+            height: 28px;
+            border-radius: 14px;
+            border: 1px solid #ddd;
+        }
+        .reset-btn, .close-settings-btn {
+            background: rgba(0,0,0,0.05);
+            border: none;
+            padding: 7px;
+            border-radius: 30px;
+            width: 100%;
+            margin-top: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .category-list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 7px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .delete-cat-btn {
+            background: #ffe0d4;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.65rem;
+        }
+        .add-cat-input {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        .add-cat-input input {
+            flex: 1;
+            padding: 5px;
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            font-size: 0.75rem;
+        }
+        button { font-family: inherit; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="stats-row">
+        <div class="stat-card period">
+            <div class="stat-label">🌸 本月经期</div>
+            <div class="stat-number" id="monthPeriodDays">0天</div>
+        </div>
+        <div class="stat-card cycle">
+            <div class="stat-label">📅 平均周期</div>
+            <div class="stat-number" id="avgCycleDays">--天</div>
+        </div>
+        <div class="stat-card predict">
+            <div class="stat-label">🔮 下次经期</div>
+            <div class="stat-number" id="nextPeriodDate">--</div>
+        </div>
+    </div>
+
+    <div class="deco-card" id="decoCard">
+        <canvas id="sakuraCanvas" class="sakura-canvas"></canvas>
+        <div class="today-status" id="todayStatus">
+            <div class="status-icon" id="statusIcon">🌸</div>
+            <div class="status-text">
+                <div class="status-title" id="statusTitle">今日状态</div>
+                <div class="status-desc" id="statusDesc">点击日期开始记录</div>
+            </div>
+        </div>
+        <div class="menu-container">
+            <div class="menu-button" id="menuButton">☰</div>
+            <div class="menu-dropdown" id="menuDropdown">
+                <div class="menu-item" id="knowledgeMenuItem">📚 科普资料</div>
+                <div class="menu-item" id="settingsMenuItem">🎨 主题·界面设置</div>
+                <div class="menu-item" id="exportMenuItem">📤 导出备份</div>
+                <div class="menu-item" id="importMenuItem">📥 导入备份</div>
+                <div class="menu-item" id="clearAllDataBtn">🗑️ 清除所有数据</div>
+                <div class="menu-item" id="manageSymptomsBtn">📝 管理症状标签</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="date-header">
+        <div class="calendar-nav">
+            <button class="nav-btn" id="prevMonthBtn">←</button>
+            <div id="currentYearMonthDisplay"></div>
+            <button class="nav-btn" id="nextMonthBtn">→</button>
+        </div>
+        <div class="selected-row">
+            <div class="selected-label" id="selectedDateLabel">点击日期查看详情</div>
+            <div class="selected-amount" id="selectedDateInfo">📝 无备注</div>
+        </div>
+        <div class="tip-banner">
+            💡 单击日期 → 选择操作 | 🔮 紫色虚线为系统智能预测
+        </div>
+    </div>
+
+    <div class="calendar-card" id="calendarTouchArea">
+        <div class="weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <div class="list-card">
+        <div class="entries-header">
+            <h4>📋 当日经期备注</h4>
+        </div>
+        <ul class="entries-list" id="entriesList"></ul>
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEY = 'menstrual_pro_data';
+    const SYMPTOMS_KEY = 'menstrual_symptoms_list';
+    const SETTINGS_KEY = 'menstrual_ui_settings';
+
+    let menstrualData = {};
+    let symptomsList = ['痛经', '量多', '量少', '腰酸', '头痛', '情绪低落', '疲劳', '正常'];
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth();
+    let selectedDate = getTodayStr();
+    let touchStartX = 0;
+    let sakuraAnimation = null;
+
+    let uiSettings = {
+        cardRadius: 20,
+        cardPadding: 12,
+        fontSize: 15,
+        expenseColor: '#e46b5a',
+        incomeColor: '#b5838a',
+        predictColor: '#9b6b9e',
+        spacingGap: 8,
+        bgColor: '#fff5f0',
+        cardBg: '#ffffff',
+    };
+
+    const FEM_THEMES = {
+        '🌸 蜜桃甜心': { expense: '#e46b5a', income: '#b5838a', bg: '#fff5f0', cardBg: '#ffffff' },
+        '💜 薰衣草梦': { expense: '#b980ea', income: '#9b6b9e', bg: '#faf5ff', cardBg: '#ffffff' },
+        '🌹 复古玫瑰': { expense: '#c44c5c', income: '#b97f6e', bg: '#fef2f0', cardBg: '#fffaf7' },
+        '🍃 清新薄荷': { expense: '#5f9e8e', income: '#78b0a0', bg: '#f0f7f4', cardBg: '#ffffff' },
+        '🌙 温柔月晕': { expense: '#e0a3a0', income: '#c2a1a5', bg: '#fffbf5', cardBg: '#ffffff' }
+    };
+
+    class SakuraPetal {
+        constructor(canvas, width, height) {
+            this.canvas = canvas;
+            this.ctx = canvas.getContext('2d');
+            this.width = width;
+            this.height = height;
+            this.reset();
+        }
+        reset() {
+            this.x = Math.random() * this.width;
+            this.y = Math.random() * -this.height;
+            this.size = 6 + Math.random() * 8;
+            this.speedY = 0.8 + Math.random() * 1.5;
+            this.speedX = -0.3 + Math.random() * 0.6;
+            this.rotation = Math.random() * Math.PI * 2;
+            this.rotationSpeed = -0.02 + Math.random() * 0.04;
+            this.opacity = 0.4 + Math.random() * 0.5;
+        }
+        update() {
+            this.y += this.speedY;
+            this.x += this.speedX;
+            this.rotation += this.rotationSpeed;
+            if (this.y > this.height + 20 || this.x < -20 || this.x > this.width + 20) {
+                this.reset();
+                this.y = -20;
+            }
+        }
+        draw() {
+            this.ctx.save();
+            this.ctx.translate(this.x, this.y);
+            this.ctx.rotate(this.rotation);
+            this.ctx.globalAlpha = this.opacity;
+            this.ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                let angle = (i * 72 - 90) * Math.PI / 180;
+                let x = Math.cos(angle) * this.size;
+                let y = Math.sin(angle) * this.size * 0.8;
+                if (i === 0) this.ctx.moveTo(x, y);
+                else this.ctx.lineTo(x, y);
+            }
+            this.ctx.closePath();
+            let gradient = this.ctx.createLinearGradient(-this.size/2, -this.size/2, this.size/2, this.size/2);
+            gradient.addColorStop(0, '#ffb7c5');
+            gradient.addColorStop(1, '#ff9eb0');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, this.size * 0.25, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#ffc4a0';
+            this.ctx.fill();
+            this.ctx.restore();
+        }
+    }
+    
+    class SakuraAnimation {
+        constructor(canvas) {
+            this.canvas = canvas;
+            this.ctx = canvas.getContext('2d');
+            this.petals = [];
+            this.animationId = null;
+            this.init();
+        }
+        init() {
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+            for (let i = 0; i < 8; i++) this.petals.push(new SakuraPetal(this.canvas, this.width, this.height));
+            this.animate();
+        }
+        resize() {
+            const rect = this.canvas.parentElement.getBoundingClientRect();
+            this.width = rect.width;
+            this.height = rect.height;
+            this.canvas.width = this.width;
+            this.canvas.height = this.height;
+            this.petals.forEach(petal => { petal.width = this.width; petal.height = this.height; petal.reset(); });
+        }
+        animate() {
+            if (!this.canvas || !this.ctx) return;
+            this.ctx.clearRect(0, 0, this.width, this.height);
+            this.petals.forEach(petal => { petal.update(); petal.draw(); });
+            this.animationId = requestAnimationFrame(() => this.animate());
+        }
+        destroy() { if (this.animationId) cancelAnimationFrame(this.animationId); }
+    }
+
+    function getTodayStr() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    function showToast(msg) { let t = document.querySelector('.toast'); if(t) t.remove(); let toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = msg; document.body.appendChild(toast); setTimeout(() => toast.remove(), 2000); }
+    function saveAll() { localStorage.setItem(STORAGE_KEY, JSON.stringify(menstrualData)); localStorage.setItem(SYMPTOMS_KEY, JSON.stringify(symptomsList)); localStorage.setItem(SETTINGS_KEY, JSON.stringify(uiSettings)); applyUISettings(); }
+    function loadAll() { let stored = localStorage.getItem(STORAGE_KEY); if(stored) menstrualData = JSON.parse(stored); let sym = localStorage.getItem(SYMPTOMS_KEY); if(sym) symptomsList = JSON.parse(sym); let sets = localStorage.getItem(SETTINGS_KEY); if(sets) uiSettings = {...uiSettings, ...JSON.parse(sets)}; applyUISettings(); }
+    function applyUISettings() { const root = document.documentElement; root.style.setProperty('--card-radius', uiSettings.cardRadius + 'px'); root.style.setProperty('--card-padding', uiSettings.cardPadding + 'px'); root.style.setProperty('--font-size-base', uiSettings.fontSize + 'px'); root.style.setProperty('--expense-color', uiSettings.expenseColor); root.style.setProperty('--income-color', uiSettings.incomeColor); root.style.setProperty('--predict-color', uiSettings.predictColor || '#9b6b9e'); root.style.setProperty('--spacing-gap', uiSettings.spacingGap + 'px'); root.style.setProperty('--bg-color', uiSettings.bgColor); root.style.setProperty('--card-bg', uiSettings.cardBg); }
+    function getPeriodDays(year, month) { let key = `${year}-${month+1}`; return menstrualData[key] || []; }
+    function getNotesMap(year, month) { let key = `${year}-${month+1}_notes`; return menstrualData[key] || {}; }
+    function setPeriodDay(year, month, day, isPeriod) { let key = `${year}-${month+1}`; let days = getPeriodDays(year, month); if(isPeriod) { if(!days.includes(day)) days.push(day); } else { days = days.filter(d => d !== day); } if(days.length > 0) menstrualData[key] = days.sort((a,b)=>a-b); else delete menstrualData[key]; saveAll(); renderCalendar(); updateStatsAndPredict(); updateStatusAnimation(); showToast(isPeriod ? '✓ 已标记经期' : '✓ 已取消经期标记'); }
+    function setDayNote(year, month, day, noteText) { let key = `${year}-${month+1}_notes`; if(!menstrualData[key]) menstrualData[key] = {}; if(noteText.trim() === "") { delete menstrualData[key][day]; if(Object.keys(menstrualData[key]).length === 0) delete menstrualData[key]; } else { menstrualData[key][day] = noteText; } saveAll(); renderCalendar(); renderEntriesForDate(selectedDate); updateSelectedInfo(); updateStatusAnimation(); showToast(noteText ? '备注已保存' : '备注已删除'); }
+    function getDayNote(year, month, day) { let notes = getNotesMap(year, month); return notes[day] || ''; }
+    function getDayStats(dateStr) { let [y,m,d] = dateStr.split('-').map(Number); let periodDays = getPeriodDays(y, m-1); let isPeriod = periodDays.includes(d); let note = getDayNote(y, m-1, d); return { isPeriod, note }; }
+    function getAllPeriodStartDates() { let starts = []; for(let key in menstrualData) { if(key.includes('_notes')) continue; let days = menstrualData[key]; if(days && days.length > 0) { let sorted = [...days].sort((a,b)=>a-b); let [year, month] = key.split('-').map(Number); starts.push(new Date(year, month-1, sorted[0])); } } return starts.sort((a,b) => a - b); }
+    function predictNextPeriod() { let starts = getAllPeriodStartDates(); if(starts.length < 2) return { nextDate: null, avgCycle: null, confidence: 'low', message: '需要至少2次经期记录才能预测' }; let intervals = []; for(let i=1;i<starts.length;i++) { let diff = (starts[i] - starts[i-1])/(1000*3600*24); if(diff>=20 && diff<=45) intervals.push(diff); } if(intervals.length===0) return { nextDate:null, avgCycle:null, confidence:'low', message:'周期数据异常' }; let avgCycle = Math.round(intervals.reduce((a,b)=>a+b,0)/intervals.length); let lastStart = starts[starts.length-1]; let nextDate = new Date(lastStart); nextDate.setDate(lastStart.getDate()+avgCycle); let confidence = intervals.length >= 3 ? 'high' : (intervals.length >= 2 ? 'medium' : 'low'); return { nextDate, avgCycle, confidence }; }
+    function updateStatsAndPredict() { let periodDaysCount = getPeriodDays(currentYear, currentMonth).length; document.getElementById('monthPeriodDays').innerText = `${periodDaysCount}天`; let prediction = predictNextPeriod(); document.getElementById('avgCycleDays').innerText = prediction.avgCycle ? `${prediction.avgCycle}天` : '--天'; if(prediction.nextDate) { let nextDateStr = `${prediction.nextDate.getMonth()+1}/${prediction.nextDate.getDate()}`; let confidenceIcon = prediction.confidence === 'high' ? '✓' : (prediction.confidence === 'medium' ? '~' : '?'); document.getElementById('nextPeriodDate').innerHTML = `${nextDateStr}<span style="font-size:8px;">${confidenceIcon}</span>`; } else { document.getElementById('nextPeriodDate').innerHTML = '待记录'; } }
+    function isPredictDate(dateStr) { let prediction = predictNextPeriod(); if(!prediction.nextDate) return false; let targetDate = new Date(dateStr); let nextStart = new Date(prediction.nextDate); let nextEnd = new Date(nextStart); nextEnd.setDate(nextStart.getDate() + 5); return targetDate >= nextStart && targetDate <= nextEnd; }
+    function getPeriodDayCount() { let [y,m,d] = selectedDate.split('-').map(Number); let periodDays = getPeriodDays(y, m-1); if (!periodDays.includes(d)) return 1; let sorted = [...periodDays].sort((a,b)=>a-b); return sorted.indexOf(d)+1; }
+    function updateStatusAnimation() { const { isPeriod, note } = getDayStats(selectedDate); const icon = document.getElementById('statusIcon'); const title = document.getElementById('statusTitle'); const desc = document.getElementById('statusDesc'); if (isPeriod) { icon.innerHTML = '🌸'; title.innerHTML = `🌸 经期第${getPeriodDayCount()}天`; desc.innerHTML = '注意保暖，多喝热水，好好休息 💕'; } else if (note) { icon.innerHTML = '📝'; title.innerHTML = '📋 今日备注'; desc.innerHTML = note.length > 20 ? note.slice(0,20)+'...' : note; } else { icon.innerHTML = '🌸'; title.innerHTML = '今日状态'; desc.innerHTML = '单击日期记录经期或备注'; } }
+    function showActionSheet(dateStr, year, month, day, isCurrentMonth) { if (!isCurrentMonth) { selectedDate = dateStr; renderCalendar(); return; } let isPeriod = getPeriodDays(year, month).includes(day); let existingNote = getDayNote(year, month, day); let modal = document.createElement('div'); modal.className = 'modal-overlay'; modal.innerHTML = `<div class="action-sheet"><div class="action-sheet-title">${year}年${month+1}月${day}日</div><button class="action-btn primary" id="actionPeriodBtn">${isPeriod ? '🌸 取消经期标记' : '🌸 标记为经期'}</button><button class="action-btn secondary" id="actionNoteBtn">${existingNote ? '📝 编辑备注' : '📝 添加备注'}</button>${existingNote ? '<button class="action-btn danger" id="actionDeleteNoteBtn">🗑️ 删除备注</button>' : ''}<button class="action-btn danger" id="actionCancelBtn">❌ 取消</button></div>`; document.body.appendChild(modal); document.getElementById('actionPeriodBtn').onclick = () => { setPeriodDay(year, month, day, !isPeriod); modal.remove(); selectedDate = dateStr; renderCalendar(); }; document.getElementById('actionNoteBtn').onclick = () => { let newNote = prompt(existingNote ? '修改备注内容：' : '添加备注内容：例如-量多/痛经/情绪不好...', existingNote); if (newNote !== null) { setDayNote(year, month, day, newNote); selectedDate = dateStr; renderCalendar(); } modal.remove(); }; if(document.getElementById('actionDeleteNoteBtn')) document.getElementById('actionDeleteNoteBtn').onclick = () => { if (confirm('确定要删除这条备注吗？')) { setDayNote(year, month, day, ''); selectedDate = dateStr; renderCalendar(); showToast('备注已删除'); } modal.remove(); }; document.getElementById('actionCancelBtn').onclick = () => modal.remove(); modal.onclick = (e) => { if (e.target === modal) modal.remove(); }; }
+    
+    function renderCalendar() {
+        let year = currentYear, month = currentMonth;
+        let firstDay = new Date(year, month, 1);
+        let startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+        let daysInMonth = new Date(year, month+1, 0).getDate();
+        let prevMonthDays = new Date(year, month, 0).getDate();
+        let grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+        let todayStr = getTodayStr();
+        let periodSet = new Set(getPeriodDays(year, month));
+        let notesMap = getNotesMap(year, month);
+        for(let i=0;i<42;i++) {
+            let dayNum, isCurrentMonth, displayYear, displayMonth, dateStr;
+            if(i < startOffset) {
+                dayNum = prevMonthDays - (startOffset - i) + 1;
+                isCurrentMonth = false;
+                displayYear = month === 0 ? year-1 : year;
+                displayMonth = month === 0 ? 11 : month-1;
+                dateStr = `${displayYear}-${String(displayMonth+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+            } else if(i >= startOffset + daysInMonth) {
+                dayNum = i - (startOffset + daysInMonth) + 1;
+                isCurrentMonth = false;
+                displayYear = month === 11 ? year+1 : year;
+                displayMonth = month === 11 ? 0 : month+1;
+                dateStr = `${displayYear}-${String(displayMonth+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+            } else {
+                dayNum = i - startOffset + 1;
+                isCurrentMonth = true;
+                dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+            }
+            let isPeriod = isCurrentMonth && periodSet.has(dayNum);
+            let noteText = isCurrentMonth ? notesMap[dayNum] : '';
+            let isPredict = isCurrentMonth && isPredictDate(dateStr) && !isPeriod;
+            let dayDiv = document.createElement('div');
+            dayDiv.className = 'calendar-day';
+            if(dateStr === selectedDate) dayDiv.classList.add('selected');
+            if(dateStr === todayStr) dayDiv.classList.add('today');
+            if(!isCurrentMonth) dayDiv.classList.add('other-month');
+            if(isPredict) dayDiv.classList.add('predict');
+            dayDiv.setAttribute('data-date', dateStr);
+            dayDiv.innerHTML = `<div class="day-number">${dayNum}</div>`;
+            if(isPeriod) dayDiv.innerHTML += `<div class="period-dot"></div>`;
+            if(isPredict && !isPeriod) dayDiv.innerHTML += `<div class="predict-dot"></div>`;
+            if(noteText && isCurrentMonth) dayDiv.innerHTML += `<div class="day-note">${noteText.slice(0,4)}</div>`;
+            dayDiv.onclick = (function(date, y, m, d, isCurr) {
+                return function(e) { showActionSheet(date, y, m, d, isCurr); };
+            })(dateStr, isCurrentMonth ? year : displayYear, isCurrentMonth ? month : displayMonth, dayNum, isCurrentMonth);
+            grid.appendChild(dayDiv);
+        }
+        document.getElementById('currentYearMonthDisplay').innerText = `${year}年 ${month+1}月`;
+        updateSelectedInfo();
+        renderEntriesForDate(selectedDate);
+        updateStatsAndPredict();
+        updateStatusAnimation();
+    }
+    
+    function renderEntriesForDate(dateStr) { let { note } = getDayStats(dateStr); let listUl = document.getElementById('entriesList'); if(!note) { listUl.innerHTML = `<li class="empty-state">✨ 单击日期添加备注</li>`; return; } let html = `<li><div class="entry-info"><div class="entry-note">📝 ${escapeHtml(note)}</div><div class="entry-time">${dateStr}</div></div><div class="entry-actions"><span class="edit-btn">✏️</span><span class="delete-btn">🗑️</span></div></li>`; listUl.innerHTML = html; listUl.querySelector('.edit-btn').onclick = () => { let newNote = prompt('修改备注内容', note); if(newNote !== null) { let [y,m,d] = selectedDate.split('-'); setDayNote(parseInt(y), parseInt(m)-1, parseInt(d), newNote); } }; listUl.querySelector('.delete-btn').onclick = () => { let [y,m,d] = selectedDate.split('-'); setDayNote(parseInt(y), parseInt(m)-1, parseInt(d), ''); }; }
+    function updateSelectedInfo() { let { isPeriod, note } = getDayStats(selectedDate); let label = document.getElementById('selectedDateLabel'); let info = document.getElementById('selectedDateInfo'); let dateObj = new Date(selectedDate); let weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']; let weekday = weekdays[dateObj.getDay()]; label.innerText = isPeriod ? `🌸 经期 · ${selectedDate} ${weekday}` : `📅 ${selectedDate} ${weekday}`; if(note) info.innerHTML = `📝 ${note}`; else info.innerHTML = isPeriod ? ' ' : '✨ 单击日期选择操作'; }
+    function changeMonth(delta) { currentMonth += delta; if(currentMonth < 0) { currentMonth = 11; currentYear--; } if(currentMonth > 11) { currentMonth = 0; currentYear++; } let maxDay = new Date(currentYear, currentMonth+1, 0).getDate(); let curDay = Math.min(parseInt(selectedDate.split('-')[2]), maxDay); selectedDate = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(curDay).padStart(2,'0')}`; renderCalendar(); }
+    function bindGestures() { let area = document.getElementById('calendarTouchArea'); area.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }); area.addEventListener('touchend', (e) => { let diff = e.changedTouches[0].screenX - touchStartX; if(Math.abs(diff) > 50) changeMonth(diff > 0 ? -1 : 1); }); }
+    
+    function toggleMenuDropdown(buttonElement) {
+        const dropdown = document.getElementById('menuDropdown');
+        if (dropdown.style.display === 'block') {
+            dropdown.style.display = 'none';
+            return;
+        }
+        const rect = buttonElement.getBoundingClientRect();
+        const menuWidth = 210;
+        const margin = 10;
+        let left = rect.right - menuWidth;
+        if (left < margin) left = margin;
+        if (left + menuWidth > window.innerWidth - margin) {
+            left = window.innerWidth - menuWidth - margin;
+        }
+        dropdown.style.position = 'fixed';
+        dropdown.style.top = (rect.bottom + 8) + 'px';
+        dropdown.style.left = left + 'px';
+        dropdown.style.display = 'block';
+    }
+    
+    // 完整的科普资料
+    function openKnowledge() { 
+        let modal = document.createElement('div'); 
+        modal.className = 'modal-overlay'; 
+        modal.innerHTML = `
+            <div class="knowledge-panel">
+                <h3>📚 月经科普小知识</h3>
+                <div class="knowledge-section">
+                    <h4>🌸 什么是月经周期？</h4>
+                    <p>月经周期是指从一次月经的第一天到下一次月经第一天的间隔天数。正常范围是21-35天，平均28天左右。每个人的周期都可能不同，只要规律就是正常的。</p>
+                </div>
+                <div class="knowledge-section">
+                    <h4>📊 什么是平均周期？</h4>
+                    <p>平均周期是根据您记录的多次月经开始日期，计算出的平均间隔天数。系统会自动计算，记录越多越准确。</p>
+                    <div class="knowledge-tip">💡 例如：您记录了3次月经，间隔分别是28天、29天、30天，那么平均周期就是29天。</div>
+                </div>
+                <div class="knowledge-section">
+                    <h4>🔮 下次经期如何预测？</h4>
+                    <p>系统会根据您的平均周期和最近一次月经开始日期，自动推算下次月经的预计时间。公式：下次经期 = 最近一次月经开始日 + 平均周期天数。</p>
+                    <div class="knowledge-tip">💡 预测仅供参考，实际日期可能因身体状况、压力、情绪等因素有1-3天的浮动。</div>
+                </div>
+                <div class="knowledge-section">
+                    <h4>✓ 可信度图标说明</h4>
+                    <p><strong>✓</strong> = 记录≥3次周期，预测可信度高<br><strong>~</strong> = 记录2次周期，可信度中等<br><strong>?</strong> = 记录<2次周期，仅供参考</p>
+                    <div class="knowledge-tip">💡 建议连续记录3-6个月，系统会越来越了解您的身体规律，预测也更准确！</div>
+                </div>
+                <div class="knowledge-section">
+                    <h4>📝 为什么要记录备注？</h4>
+                    <p>记录痛经、量多、情绪波动等症状，可以帮助您了解自己的身体变化，也方便就医时向医生提供详细信息。</p>
+                </div>
+                <button class="close-settings-btn" id="closeKnowledgeBtn">关闭</button>
+            </div>
+        `; 
+        document.body.appendChild(modal); 
+        modal.querySelector('#closeKnowledgeBtn').onclick = () => modal.remove(); 
+        modal.onclick = (e) => { if(e.target === modal) modal.remove(); }; 
+    }
+    
+    // 完整的主题设置
+    function openSettings() { 
+        let modal = document.createElement('div'); 
+        modal.className = 'modal-overlay'; 
+        modal.innerHTML = `
+            <div class="settings-panel">
+                <h3 style="margin-bottom:14px;">🎀 女性主题·界面设置</h3>
+                <div class="settings-item">
+                    <label class="settings-label">✨ 一键主题</label>
+                    <div class="theme-buttons" id="themeButtons"></div>
+                </div>
+                <div class="settings-item">
+                    <label class="settings-label">🌸 经期标记颜色</label>
+                    <div class="hsl-row">
+                        <span class="hsl-sub-label">色相</span>
+                        <input type="range" id="expenseHue" min="0" max="360" step="1">
+                        <div class="color-preview-block" id="expensePreview"></div>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <label class="settings-label">📐 卡片圆角</label>
+                    <input type="range" id="radiusSlider" min="12" max="40" step="1">
+                    <span id="radiusVal"></span>
+                </div>
+                <div class="settings-item">
+                    <label class="settings-label">📏 间距大小</label>
+                    <input type="range" id="gapSlider" min="4" max="20" step="1">
+                    <span id="gapVal"></span>
+                </div>
+                <div class="settings-item">
+                    <label class="settings-label">🔤 字体大小</label>
+                    <input type="range" id="fontSlider" min="12" max="20" step="1">
+                    <span id="fontVal"></span>
+                </div>
+                <button class="reset-btn" id="resetUI">恢复默认</button>
+                <button class="close-settings-btn" id="closeSettings">关闭</button>
+            </div>
+        `; 
+        document.body.appendChild(modal);
+        
+        let expenseHue = modal.querySelector('#expenseHue');
+        let preview = modal.querySelector('#expensePreview');
+        function updateExpense() {
+            let h = expenseHue.value;
+            let newColor = `hsl(${h}, 70%, 65%)`;
+            uiSettings.expenseColor = newColor;
+            applyUISettings();
+            preview.style.backgroundColor = newColor;
+        }
+        expenseHue.value = 10; 
+        preview.style.backgroundColor = uiSettings.expenseColor;
+        expenseHue.oninput = updateExpense;
+        
+        let radiusSlider = modal.querySelector('#radiusSlider');
+        radiusSlider.value = uiSettings.cardRadius;
+        radiusSlider.oninput = () => { 
+            uiSettings.cardRadius = parseInt(radiusSlider.value); 
+            applyUISettings(); 
+            modal.querySelector('#radiusVal').innerText = uiSettings.cardRadius+'px'; 
+        };
+        let gapSlider = modal.querySelector('#gapSlider');
+        gapSlider.value = uiSettings.spacingGap;
+        gapSlider.oninput = () => { 
+            uiSettings.spacingGap = parseInt(gapSlider.value); 
+            applyUISettings(); 
+            modal.querySelector('#gapVal').innerText = uiSettings.spacingGap+'px'; 
+        };
+        let fontSlider = modal.querySelector('#fontSlider');
+        fontSlider.value = uiSettings.fontSize;
+        fontSlider.oninput = () => { 
+            uiSettings.fontSize = parseInt(fontSlider.value); 
+            applyUISettings(); 
+            modal.querySelector('#fontVal').innerText = uiSettings.fontSize+'px'; 
+        };
+        
+        modal.querySelector('#radiusVal').innerText = uiSettings.cardRadius+'px';
+        modal.querySelector('#gapVal').innerText = uiSettings.spacingGap+'px';
+        modal.querySelector('#fontVal').innerText = uiSettings.fontSize+'px';
+        
+        let themeDiv = modal.querySelector('#themeButtons');
+        themeDiv.innerHTML = Object.keys(FEM_THEMES).map(name => `<button class="theme-btn" data-theme="${name}">${name}</button>`).join('');
+        themeDiv.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.onclick = () => {
+                let t = FEM_THEMES[btn.dataset.theme];
+                uiSettings.expenseColor = t.expense;
+                uiSettings.incomeColor = t.income;
+                uiSettings.bgColor = t.bg;
+                uiSettings.cardBg = t.cardBg;
+                applyUISettings();
+                preview.style.backgroundColor = uiSettings.expenseColor;
+                showToast(`切换至 ${btn.dataset.theme}`);
+            };
+        });
+        
+        modal.querySelector('#resetUI').onclick = () => {
+            uiSettings = { cardRadius:20, cardPadding:12, fontSize:15, expenseColor:'#e46b5a', incomeColor:'#b5838a', predictColor:'#9b6b9e', spacingGap:8, bgColor:'#fff5f0', cardBg:'#ffffff' };
+            applyUISettings();
+            modal.remove();
+            openSettings();
+        };
+        
+        modal.querySelector('#closeSettings').onclick = () => { 
+            saveAll(); 
+            modal.remove(); 
+            showToast('设置已保存'); 
+        };
+        modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+    }
+    
+    function exportData() { let backup = { menstrualData, symptomsList, uiSettings }; let blob = new Blob([JSON.stringify(backup)], {type:'application/json'}); let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `月经记录_${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('导出成功'); }
+    function importData() { let input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = (e) => { let file = e.target.files[0]; let reader = new FileReader(); reader.onload = (ev) => { try { let data = JSON.parse(ev.target.result); if(data.menstrualData) menstrualData = data.menstrualData; if(data.symptomsList) symptomsList = data.symptomsList; if(data.uiSettings) uiSettings = {...uiSettings, ...data.uiSettings}; saveAll(); renderCalendar(); showToast('导入成功'); } catch(e) { showToast('文件错误'); } }; reader.readAsText(file); }; input.click(); }
+    function clearAllData() { if(confirm('⚠️ 永久删除所有月经记录和备注，不可恢复！')) { menstrualData = {}; saveAll(); renderCalendar(); showToast('已清空所有数据'); } }
+    function manageSymptoms() { 
+        let modal = document.createElement('div'); 
+        modal.className = 'modal-overlay'; 
+        modal.innerHTML = `<div class="category-manager"><h3>📝 常用症状标签</h3><div id="symptomList"></div><div class="add-cat-input"><input id="newSym" placeholder="新症状"><button id="addSymBtn">➕ 添加</button></div><button class="close-settings-btn" id="closeSym">关闭</button></div>`; 
+        document.body.appendChild(modal); 
+        function renderSym() { 
+            let div = modal.querySelector('#symptomList'); 
+            div.innerHTML = symptomsList.map(s => `<div class="category-list-item"><span>${escapeHtml(s)}</span><button class="delete-cat-btn" data-sym="${escapeHtml(s)}">删除</button></div>`).join(''); 
+            div.querySelectorAll('.delete-cat-btn').forEach(btn => { 
+                btn.onclick = () => { 
+                    let sym = btn.getAttribute('data-sym'); 
+                    symptomsList = symptomsList.filter(s => s !== sym); 
+                    if(symptomsList.length === 0) symptomsList = ['记录一下']; 
+                    saveAll(); 
+                    renderSym(); 
+                }; 
+            }); 
+        } 
+        renderSym(); 
+        modal.querySelector('#addSymBtn').onclick = () => { 
+            let newS = modal.querySelector('#newSym').value.trim(); 
+            if(newS && !symptomsList.includes(newS)) { symptomsList.push(newS); saveAll(); renderSym(); modal.querySelector('#newSym').value = ''; } 
+        }; 
+        modal.querySelector('#closeSym').onclick = () => modal.remove(); 
+        modal.onclick = (e) => { if(e.target === modal) modal.remove(); }; 
+    }
+    
+    function bindEvents() {
+        document.getElementById('prevMonthBtn').onclick = () => changeMonth(-1);
+        document.getElementById('nextMonthBtn').onclick = () => changeMonth(1);
+        const menuButton = document.getElementById('menuButton');
+        const dropdown = document.getElementById('menuDropdown');
+        menuButton.onclick = (e) => { 
+            e.stopPropagation(); 
+            toggleMenuDropdown(menuButton);
+        };
+        document.addEventListener('click', (e) => {
+            if (dropdown.style.display === 'block' && !menuButton.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+        document.getElementById('knowledgeMenuItem').onclick = () => { openKnowledge(); dropdown.style.display = 'none'; };
+        document.getElementById('settingsMenuItem').onclick = () => { openSettings(); dropdown.style.display = 'none'; };
+        document.getElementById('exportMenuItem').onclick = () => { exportData(); dropdown.style.display = 'none'; };
+        document.getElementById('importMenuItem').onclick = () => { importData(); dropdown.style.display = 'none'; };
+        document.getElementById('clearAllDataBtn').onclick = () => { clearAllData(); dropdown.style.display = 'none'; };
+        document.getElementById('manageSymptomsBtn').onclick = () => { manageSymptoms(); dropdown.style.display = 'none'; };
+    }
+    
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    function startSakuraAnimation() { const canvas = document.getElementById('sakuraCanvas'); if (canvas && !sakuraAnimation) { sakuraAnimation = new SakuraAnimation(canvas); } }
+    
+    loadAll(); bindEvents(); bindGestures(); renderCalendar(); startSakuraAnimation();
+</script>
+</body>
+</html>
