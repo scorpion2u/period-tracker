@@ -806,7 +806,79 @@
         }
         destroy() { if (this.animationId) cancelAnimationFrame(this.animationId); }
     }
+function createModal(html) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = html;
 
+    document.body.appendChild(modal);
+
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+
+    return modal;
+}
+
+function showConfirm(message, onConfirm) {
+    const modal = createModal(`
+        <div class="action-sheet">
+            <div class="action-sheet-title">⚠️ 请确认</div>
+            <div style="padding:10px 0;text-align:center;font-size:14px;">
+                ${message}
+            </div>
+            <button class="action-btn danger" id="confirmYes">确定</button>
+            <button class="action-btn secondary" id="confirmNo">取消</button>
+        </div>
+    `);
+
+    modal.querySelector('#confirmYes').onclick = () => {
+        onConfirm && onConfirm();
+        modal.remove();
+    };
+
+    modal.querySelector('#confirmNo').onclick = () => {
+        modal.remove();
+    };
+}
+function showInput(title, placeholder, defaultValue, onSubmit) {
+    const modal = createModal(`
+        <div class="action-sheet">
+            <div class="action-sheet-title">${title}</div>
+
+            <input id="inputField" 
+                style="
+                    width:100%;
+                    padding:10px;
+                    border-radius:12px;
+                    border:1px solid #ddd;
+                    margin:10px 0;
+                    font-size:14px;
+                "
+                placeholder="${placeholder}"
+                value="${defaultValue || ''}"
+            />
+
+            <button class="action-btn primary" id="inputOk">确定</button>
+            <button class="action-btn secondary" id="inputCancel">取消</button>
+        </div>
+    `);
+
+    const input = modal.querySelector('#inputField');
+
+    // 自动聚焦（很关键）
+    setTimeout(() => input.focus(), 100);
+
+    modal.querySelector('#inputOk').onclick = () => {
+        const value = input.value;
+        onSubmit && onSubmit(value);
+        modal.remove();
+    };
+
+    modal.querySelector('#inputCancel').onclick = () => {
+        modal.remove();
+    };
+}
     function getTodayStr() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
     function showToast(msg) { let t = document.querySelector('.toast'); if(t) t.remove(); let toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = msg; document.body.appendChild(toast); setTimeout(() => toast.remove(), 2000); }
     function saveAll() { localStorage.setItem(STORAGE_KEY, JSON.stringify(menstrualData)); localStorage.setItem(SYMPTOMS_KEY, JSON.stringify(symptomsList)); localStorage.setItem(SETTINGS_KEY, JSON.stringify(uiSettings)); applyUISettings(); }
@@ -824,7 +896,86 @@
     function isPredictDate(dateStr) { let prediction = predictNextPeriod(); if(!prediction.nextDate) return false; let targetDate = new Date(dateStr); let nextStart = new Date(prediction.nextDate); let nextEnd = new Date(nextStart); nextEnd.setDate(nextStart.getDate() + 5); return targetDate >= nextStart && targetDate <= nextEnd; }
     function getPeriodDayCount() { let [y,m,d] = selectedDate.split('-').map(Number); let periodDays = getPeriodDays(y, m-1); if (!periodDays.includes(d)) return 1; let sorted = [...periodDays].sort((a,b)=>a-b); return sorted.indexOf(d)+1; }
     function updateStatusAnimation() { const { isPeriod, note } = getDayStats(selectedDate); const icon = document.getElementById('statusIcon'); const title = document.getElementById('statusTitle'); const desc = document.getElementById('statusDesc'); if (isPeriod) { icon.innerHTML = '🌸'; title.innerHTML = `🌸 经期第${getPeriodDayCount()}天`; desc.innerHTML = '注意保暖，多喝热水，好好休息 💕'; } else if (note) { icon.innerHTML = '📝'; title.innerHTML = '📋 今日备注'; desc.innerHTML = note.length > 20 ? note.slice(0,20)+'...' : note; } else { icon.innerHTML = '🌸'; title.innerHTML = '今日状态'; desc.innerHTML = '单击日期记录经期或备注'; } }
-    function showActionSheet(dateStr, year, month, day, isCurrentMonth) { if (!isCurrentMonth) { selectedDate = dateStr; renderCalendar(); return; } let isPeriod = getPeriodDays(year, month).includes(day); let existingNote = getDayNote(year, month, day); let modal = document.createElement('div'); modal.className = 'modal-overlay'; modal.innerHTML = `<div class="action-sheet"><div class="action-sheet-title">${year}年${month+1}月${day}日</div><button class="action-btn primary" id="actionPeriodBtn">${isPeriod ? '🌸 取消经期标记' : '🌸 标记为经期'}</button><button class="action-btn secondary" id="actionNoteBtn">${existingNote ? '📝 编辑备注' : '📝 添加备注'}</button>${existingNote ? '<button class="action-btn danger" id="actionDeleteNoteBtn">🗑️ 删除备注</button>' : ''}<button class="action-btn danger" id="actionCancelBtn">❌ 取消</button></div>`; document.body.appendChild(modal); document.getElementById('actionPeriodBtn').onclick = () => { setPeriodDay(year, month, day, !isPeriod); modal.remove(); selectedDate = dateStr; renderCalendar(); }; document.getElementById('actionNoteBtn').onclick = () => { let newNote = prompt(existingNote ? '修改备注内容：' : '添加备注内容：例如-量多/痛经/情绪不好...', existingNote); if (newNote !== null) { setDayNote(year, month, day, newNote); selectedDate = dateStr; renderCalendar(); } modal.remove(); }; if(document.getElementById('actionDeleteNoteBtn')) document.getElementById('actionDeleteNoteBtn').onclick = () => { if (confirm('确定要删除这条备注吗？')) { setDayNote(year, month, day, ''); selectedDate = dateStr; renderCalendar(); showToast('备注已删除'); } modal.remove(); }; document.getElementById('actionCancelBtn').onclick = () => modal.remove(); modal.onclick = (e) => { if (e.target === modal) modal.remove(); }; }
+    function showActionSheet(dateStr, year, month, day, isCurrentMonth) {
+    if (!isCurrentMonth) {
+        selectedDate = dateStr;
+        renderCalendar();
+        return;
+    }
+
+    let isPeriod = getPeriodDays(year, month).includes(day);
+    let existingNote = getDayNote(year, month, day);
+
+    let modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+
+    modal.innerHTML = `
+        <div class="action-sheet">
+            <div class="action-sheet-title">${year}年${month+1}月${day}日</div>
+
+            <button class="action-btn primary" id="actionPeriodBtn">
+                ${isPeriod ? '🌸 取消经期标记' : '🌸 标记为经期'}
+            </button>
+
+            <button class="action-btn secondary" id="actionNoteBtn">
+                ${existingNote ? '📝 编辑备注' : '📝 添加备注'}
+            </button>
+
+            ${existingNote ? '<button class="action-btn danger" id="actionDeleteNoteBtn">🗑️ 删除备注</button>' : ''}
+
+            <button class="action-btn danger" id="actionCancelBtn">❌ 取消</button>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // 经期按钮
+    document.getElementById('actionPeriodBtn').onclick = () => {
+        setPeriodDay(year, month, day, !isPeriod);
+        modal.remove();
+        selectedDate = dateStr;
+        renderCalendar();
+    };
+
+    // 备注按钮
+    document.getElementById('actionNoteBtn').onclick = () => {
+        modal.remove();
+
+        showInput(
+            existingNote ? '修改备注' : '添加备注',
+            '例如：量多 / 痛经 / 情绪不好...',
+            existingNote,
+            (newNote) => {
+                if (newNote !== null) {
+                    setDayNote(year, month, day, newNote);
+                    selectedDate = dateStr;
+                    renderCalendar();
+                }
+            }
+        );
+    };
+
+    // 删除按钮
+    if (document.getElementById('actionDeleteNoteBtn')) {
+        document.getElementById('actionDeleteNoteBtn').onclick = () => {
+            showConfirm('确定要删除这条备注吗？', () => {
+                setDayNote(year, month, day, '');
+                selectedDate = dateStr;
+                renderCalendar();
+                showToast('备注已删除');
+            });
+            modal.remove();
+        };
+    }
+
+    // 取消按钮
+    document.getElementById('actionCancelBtn').onclick = () => modal.remove();
+
+    // 点击背景关闭
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+}
     
     function renderCalendar() {
         let year = currentYear, month = currentMonth;
@@ -882,7 +1033,21 @@
         updateStatusAnimation();
     }
     
-    function renderEntriesForDate(dateStr) { let { note } = getDayStats(dateStr); let listUl = document.getElementById('entriesList'); if(!note) { listUl.innerHTML = `<li class="empty-state">✨ 单击日期添加备注</li>`; return; } let html = `<li><div class="entry-info"><div class="entry-note">📝 ${escapeHtml(note)}</div><div class="entry-time">${dateStr}</div></div><div class="entry-actions"><span class="edit-btn">✏️</span><span class="delete-btn">🗑️</span></div></li>`; listUl.innerHTML = html; listUl.querySelector('.edit-btn').onclick = () => { let newNote = prompt('修改备注内容', note); if(newNote !== null) { let [y,m,d] = selectedDate.split('-'); setDayNote(parseInt(y), parseInt(m)-1, parseInt(d), newNote); } }; listUl.querySelector('.delete-btn').onclick = () => { let [y,m,d] = selectedDate.split('-'); setDayNote(parseInt(y), parseInt(m)-1, parseInt(d), ''); }; }
+    function renderEntriesForDate(dateStr) { let { note } = getDayStats(dateStr); let listUl = document.getElementById('entriesList'); if(!note) { listUl.innerHTML = `<li class="empty-state">✨ 单击日期添加备注</li>`; return; } let html = `<li><div class="entry-info"><div class="entry-note">📝 ${escapeHtml(note)}</div><div class="entry-time">${dateStr}</div></div><div class="entry-actions"><span class="edit-btn">✏️</span><span class="delete-btn">🗑️</span></div></li>`; listUl.innerHTML = html; listUl.querySelector('.edit-btn').onclick = () => {
+
+    showInput(
+        '修改备注',
+        '输入备注内容...',
+        note,
+        (newNote) => {
+            if (newNote !== null) {
+                let [y,m,d] = selectedDate.split('-');
+                setDayNote(parseInt(y), parseInt(m)-1, parseInt(d), newNote);
+            }
+        }
+    );
+
+}; listUl.querySelector('.delete-btn').onclick = () => { let [y,m,d] = selectedDate.split('-'); setDayNote(parseInt(y), parseInt(m)-1, parseInt(d), ''); }; }
     function updateSelectedInfo() { let { isPeriod, note } = getDayStats(selectedDate); let label = document.getElementById('selectedDateLabel'); let info = document.getElementById('selectedDateInfo'); let dateObj = new Date(selectedDate); let weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']; let weekday = weekdays[dateObj.getDay()]; label.innerText = isPeriod ? `🌸 经期 · ${selectedDate} ${weekday}` : `📅 ${selectedDate} ${weekday}`; if(note) info.innerHTML = `📝 ${note}`; else info.innerHTML = isPeriod ? ' ' : ''; }
     function changeMonth(delta) { currentMonth += delta; if(currentMonth < 0) { currentMonth = 11; currentYear--; } if(currentMonth > 11) { currentMonth = 0; currentYear++; } let maxDay = new Date(currentYear, currentMonth+1, 0).getDate(); let curDay = Math.min(parseInt(selectedDate.split('-')[2]), maxDay); selectedDate = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(curDay).padStart(2,'0')}`; renderCalendar(); }
     function bindGestures() { let area = document.getElementById('calendarTouchArea'); area.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }); area.addEventListener('touchend', (e) => { let diff = e.changedTouches[0].screenX - touchStartX; if(Math.abs(diff) > 50) changeMonth(diff > 0 ? -1 : 1); }); }
@@ -1056,7 +1221,14 @@
     
     function exportData() { let backup = { menstrualData, symptomsList, uiSettings }; let blob = new Blob([JSON.stringify(backup)], {type:'application/json'}); let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `月经记录_${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('导出成功'); }
     function importData() { let input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = (e) => { let file = e.target.files[0]; let reader = new FileReader(); reader.onload = (ev) => { try { let data = JSON.parse(ev.target.result); if(data.menstrualData) menstrualData = data.menstrualData; if(data.symptomsList) symptomsList = data.symptomsList; if(data.uiSettings) uiSettings = {...uiSettings, ...data.uiSettings}; saveAll(); renderCalendar(); showToast('导入成功'); } catch(e) { showToast('文件错误'); } }; reader.readAsText(file); }; input.click(); }
-    function clearAllData() { if(confirm('⚠️ 永久删除所有月经记录和备注，不可恢复！')) { menstrualData = {}; saveAll(); renderCalendar(); showToast('已清空所有数据'); } }
+    function clearAllData() {
+    showConfirm('⚠️ 永久删除所有月经记录和备注，不可恢复！', () => {
+        menstrualData = {};
+        saveAll();
+        renderCalendar();
+        showToast('已清空所有数据');
+    });
+}
     function manageSymptoms() { 
         let modal = document.createElement('div'); 
         modal.className = 'modal-overlay'; 
