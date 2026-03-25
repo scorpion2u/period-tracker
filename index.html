@@ -1053,8 +1053,67 @@
         };
         modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
     }
-    
-    function exportData() { let backup = { menstrualData, symptomsList, uiSettings }; let blob = new Blob([JSON.stringify(backup)], {type:'application/json'}); let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `月经记录_${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('导出成功'); }
+async function exportData() {
+    let backup = {
+        menstrualData,
+        symptomsList,
+        uiSettings
+    };
+
+    let dataStr = JSON.stringify(backup, null, 2);
+    let fileName = `经期备份_${new Date().toISOString().slice(0,10)}.json`;
+
+    if (window.showSaveFilePicker) {
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: fileName,
+                types: [{
+                    description: 'JSON 文件',
+                    accept: { 'application/json': ['.json'] }
+                }]
+            });
+
+            const writable = await handle.createWritable();
+            await writable.write(dataStr);
+            await writable.close();
+
+            showToast('✅ 已保存到文件');
+            return;
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error(err);
+                showToast('保存失败，尝试备用方式');
+            }
+        }
+    }
+
+    try {
+        let blob = new Blob([dataStr], { type: 'application/json' });
+        let url = URL.createObjectURL(blob);
+
+        let link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        URL.revokeObjectURL(url);
+
+        showToast('📥 已下载备份文件');
+        return;
+    } catch (e) {
+        console.error(e);
+    }
+
+    try {
+        await navigator.clipboard.writeText(dataStr);
+        showToast('📋 备份已复制，请手动保存');
+    } catch (e) {
+        alert('导出失败，请手动复制数据：\n\n' + dataStr);
+    }
+}
     function importData() { let input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = (e) => { let file = e.target.files[0]; let reader = new FileReader(); reader.onload = (ev) => { try { let data = JSON.parse(ev.target.result); if(data.menstrualData) menstrualData = data.menstrualData; if(data.symptomsList) symptomsList = data.symptomsList; if(data.uiSettings) uiSettings = {...uiSettings, ...data.uiSettings}; saveAll(); renderCalendar(); showToast('导入成功'); } catch(e) { showToast('文件错误'); } }; reader.readAsText(file); }; input.click(); }
     function clearAllData() { if(confirm('⚠️ 永久删除所有月经记录和备注，不可恢复！')) { menstrualData = {}; saveAll(); renderCalendar(); showToast('已清空所有数据'); } }
     function manageSymptoms() { 
@@ -1100,7 +1159,10 @@
         });
         document.getElementById('knowledgeMenuItem').onclick = () => { openKnowledge(); dropdown.style.display = 'none'; };
         document.getElementById('settingsMenuItem').onclick = () => { openSettings(); dropdown.style.display = 'none'; };
-        document.getElementById('exportMenuItem').onclick = () => { exportData(); dropdown.style.display = 'none'; };
+        document.getElementById('exportMenuItem').onclick = async () => { 
+    await exportData(); 
+    dropdown.style.display = 'none'; 
+};
         document.getElementById('importMenuItem').onclick = () => { importData(); dropdown.style.display = 'none'; };
         document.getElementById('clearAllDataBtn').onclick = () => { clearAllData(); dropdown.style.display = 'none'; };
         document.getElementById('manageSymptomsBtn').onclick = () => { manageSymptoms(); dropdown.style.display = 'none'; };
