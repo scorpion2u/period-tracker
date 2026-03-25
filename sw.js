@@ -1,8 +1,8 @@
 const CACHE_NAME = 'menstrual-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  './',
+  './index.html',
+  './manifest.json'
 ];
 
 self.addEventListener('install', event => {
@@ -17,4 +17,8 @@ self.addEventListener('fetch', event => {
     caches.match(event.request)
       .then(response => response || fetch(event.request))
   );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(self.clients.claim());
 });

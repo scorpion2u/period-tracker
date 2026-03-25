@@ -2,7 +2,7 @@
   "name": "经期小助手",
   "short_name": "经期助手",
   "description": "贴心记录经期，预测周期，管理症状",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "theme_color": "#e46b5a",
   "background_color": "#fff5f0",
