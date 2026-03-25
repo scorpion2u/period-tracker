@@ -39,6 +39,7 @@
             transition: all 0.2s ease;
             color: var(--text-primary);
             min-height: 100vh;
+            font-size: var(--font-size-base);
         }
 
         .container {
@@ -210,7 +211,7 @@
             padding: 10px 4px;
         }
         .stat-label {
-            font-size: 11px;
+            font-size: 0.75em;
             font-weight: 500;
             color: var(--text-secondary);
             margin-bottom: 6px;
@@ -220,7 +221,7 @@
             gap: 4px;
         }
         .stat-number {
-            font-size: 16px;
+            font-size: 1.1em;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
             color: var(--text-primary);
@@ -397,7 +398,7 @@
         .entry-info { flex: 1; }
         .entry-note { 
             font-weight: 500; 
-            font-size: 12px; 
+            font-size: 0.9em; 
         }
         .entry-time { 
             font-size: 9px; 
@@ -575,6 +576,22 @@
             gap: 6px;
             margin-top: 5px;
         }
+        .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.slider-row input[type="range"] {
+    flex: 1;
+}
+
+.slider-row span {
+    width: 40px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
         .hsl-sub-label { width: 40px; font-size: 0.65rem; }
         input[type="range"] { flex: 1; }
         .color-preview-block {
@@ -914,11 +931,13 @@ function showInput(title, placeholder, defaultValue, onSubmit) {
     function getPeriodDayCount() { let [y,m,d] = selectedDate.split('-').map(Number); let periodDays = getPeriodDays(y, m-1); if (!periodDays.includes(d)) return 1; let sorted = [...periodDays].sort((a,b)=>a-b); return sorted.indexOf(d)+1; }
     function updateStatusAnimation() { const { isPeriod, note } = getDayStats(selectedDate); const icon = document.getElementById('statusIcon'); const title = document.getElementById('statusTitle'); const desc = document.getElementById('statusDesc'); if (isPeriod) { icon.innerHTML = '🌸'; title.innerHTML = `🌸 经期第${getPeriodDayCount()}天`; desc.innerHTML = '注意保暖，多喝热水，好好休息 💕'; } else if (note) { icon.innerHTML = '📝'; title.innerHTML = '📋 今日备注'; desc.innerHTML = note.length > 20 ? note.slice(0,20)+'...' : note; } else { icon.innerHTML = '🌸'; title.innerHTML = '今日状态'; desc.innerHTML = '单击日期记录经期或备注'; } }
     function showActionSheet(dateStr, year, month, day, isCurrentMonth) {
-    if (!isCurrentMonth) {
+
+    if (selectedDate !== dateStr) {
         selectedDate = dateStr;
         renderCalendar();
-        return;
     }
+
+    if (!isCurrentMonth) return;
 
     let isPeriod = getPeriodDays(year, month).includes(day);
     let existingNote = getDayNote(year, month, day);
@@ -1037,7 +1056,6 @@ function showInput(title, placeholder, defaultValue, onSubmit) {
             dayDiv.innerHTML = `<div class="day-number">${dayNum}</div>`;
             if(isPeriod) dayDiv.innerHTML += `<div class="period-dot"></div>`;
             if(isPredict && !isPeriod) dayDiv.innerHTML += `<div class="predict-dot"></div>`;
-            if(noteText && isCurrentMonth) dayDiv.innerHTML += `<div class="day-note">${noteText.slice(0,4)}</div>`;
             dayDiv.onclick = (function(date, y, m, d, isCurr) {
                 return function(e) { showActionSheet(date, y, m, d, isCurr); };
             })(dateStr, isCurrentMonth ? year : displayYear, isCurrentMonth ? month : displayMonth, dayNum, isCurrentMonth);
@@ -1133,37 +1151,54 @@ function showInput(title, placeholder, defaultValue, onSubmit) {
         modal.className = 'modal-overlay'; 
         modal.innerHTML = `
             <div class="settings-panel">
-                <h3 style="margin-bottom:14px;">🎀 女性主题·界面设置</h3>
-                <div class="settings-item">
-                    <label class="settings-label">✨ 一键主题</label>
-                    <div class="theme-buttons" id="themeButtons"></div>
-                </div>
-                <div class="settings-item">
-                    <label class="settings-label">🌸 经期标记颜色</label>
-                    <div class="hsl-row">
-                        <span class="hsl-sub-label">色相</span>
-                        <input type="range" id="expenseHue" min="0" max="360" step="1">
-                        <div class="color-preview-block" id="expensePreview"></div>
-                    </div>
-                </div>
-                <div class="settings-item">
-                    <label class="settings-label">📐 卡片圆角</label>
-                    <input type="range" id="radiusSlider" min="12" max="40" step="1">
-                    <span id="radiusVal"></span>
-                </div>
-                <div class="settings-item">
-                    <label class="settings-label">📏 间距大小</label>
-                    <input type="range" id="gapSlider" min="4" max="20" step="1">
-                    <span id="gapVal"></span>
-                </div>
-                <div class="settings-item">
-                    <label class="settings-label">🔤 字体大小</label>
-                    <input type="range" id="fontSlider" min="12" max="20" step="1">
-                    <span id="fontVal"></span>
-                </div>
-                <button class="reset-btn" id="resetUI">恢复默认</button>
-                <button class="close-settings-btn" id="closeSettings">关闭</button>
-            </div>
+    <h3 style="margin-bottom:14px;">🎀 女性主题·界面设置</h3>
+
+    <!-- 主题 -->
+    <div class="settings-item">
+        <label class="settings-label">✨ 一键主题</label>
+        <div class="theme-buttons" id="themeButtons"></div>
+    </div>
+
+    <!-- 经期颜色 -->
+    <div class="settings-item">
+        <label class="settings-label">🌸 经期标记颜色</label>
+        <div class="hsl-row">
+            <span class="hsl-sub-label">色相</span>
+            <input type="range" id="expenseHue" min="0" max="360">
+            <div class="color-preview-block" id="expensePreview"></div>
+        </div>
+    </div>
+
+    <!-- 卡片圆角 -->
+    <div class="settings-item">
+        <label class="settings-label">📐 卡片圆角</label>
+        <div class="slider-row">
+            <input type="range" id="radiusSlider" min="12" max="40">
+            <span id="radiusVal"></span>
+        </div>
+    </div>
+
+    <!-- 间距 -->
+    <div class="settings-item">
+        <label class="settings-label">📏 间距大小</label>
+        <div class="slider-row">
+            <input type="range" id="gapSlider" min="4" max="20">
+            <span id="gapVal"></span>
+        </div>
+    </div>
+
+    <!-- 字体 -->
+    <div class="settings-item">
+        <label class="settings-label">🔤 字体大小</label>
+        <div class="slider-row">
+            <input type="range" id="fontSlider" min="12" max="20">
+            <span id="fontVal"></span>
+        </div>
+    </div>
+
+    <button class="reset-btn" id="resetUI">恢复默认</button>
+    <button class="close-settings-btn" id="closeSettings">关闭</button>
+</div>
         `; 
         document.body.appendChild(modal);
         
