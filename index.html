@@ -1219,8 +1219,23 @@ function showInput(title, placeholder, defaultValue, onSubmit) {
         modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
     }
     
-    function exportData() { let backup = { menstrualData, symptomsList, uiSettings }; let blob = new Blob([JSON.stringify(backup)], {type:'application/json'}); let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `月经记录_${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('导出成功'); }
     function importData() { let input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = (e) => { let file = e.target.files[0]; let reader = new FileReader(); reader.onload = (ev) => { try { let data = JSON.parse(ev.target.result); if(data.menstrualData) menstrualData = data.menstrualData; if(data.symptomsList) symptomsList = data.symptomsList; if(data.uiSettings) uiSettings = {...uiSettings, ...data.uiSettings}; saveAll(); renderCalendar(); showToast('导入成功'); } catch(e) { showToast('文件错误'); } }; reader.readAsText(file); }; input.click(); }
+    
+   function exportData(filename) {
+    let backup = { menstrualData, symptomsList, uiSettings };
+    let blob = new Blob([JSON.stringify(backup)], {type:'application/json'});
+    
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+
+    // ✅ 自动修复后缀
+    filename = filename.replace(/\.json$/i, '') + '.json';
+
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('导出成功');
+} 
     function clearAllData() {
     showConfirm('⚠️ 永久删除所有月经记录和备注，不可恢复！', () => {
         menstrualData = {};
@@ -1270,9 +1285,29 @@ function showInput(title, placeholder, defaultValue, onSubmit) {
                 dropdown.style.display = 'none';
             }
         });
+document.getElementById('exportMenuItem').onclick = () => {
+
+    let today = new Date();
+    let defaultName = `经期记录备份${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+    showInput(
+        '导出备份',
+        '请输入文件名',
+        defaultName,
+        (filename) => {
+            if (!filename.trim()) {
+    showToast('文件名不能为空');
+    return;
+}
+            exportData(filename); // ✅ 调用这里
+        }
+    );
+
+    dropdown.style.display = 'none';
+};
         document.getElementById('knowledgeMenuItem').onclick = () => { openKnowledge(); dropdown.style.display = 'none'; };
         document.getElementById('settingsMenuItem').onclick = () => { openSettings(); dropdown.style.display = 'none'; };
-        document.getElementById('exportMenuItem').onclick = () => { exportData(); dropdown.style.display = 'none'; };
+  
         document.getElementById('importMenuItem').onclick = () => { importData(); dropdown.style.display = 'none'; };
         document.getElementById('clearAllDataBtn').onclick = () => { clearAllData(); dropdown.style.display = 'none'; };
         document.getElementById('manageSymptomsBtn').onclick = () => { manageSymptoms(); dropdown.style.display = 'none'; };
