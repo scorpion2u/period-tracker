@@ -1054,7 +1054,65 @@
         modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
     }
     
-    function exportData() { let backup = { menstrualData, symptomsList, uiSettings }; let blob = new Blob([JSON.stringify(backup)], {type:'application/json'}); let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `月经记录_${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('导出成功'); }
+    async function exportData() {
+    try {
+        const dataStr = JSON.stringify({
+            menstrualData,
+            symptomsList,
+            uiSettings
+        }, null, 2);
+
+        const fileName = `经期备份_${new Date().toISOString().slice(0,10)}.json`;
+
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        // 🥇 方案1：强制下载（主方案）
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.style.display = 'none';
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // 🥈 方案2：WebView兜底（有些手机不触发下载）
+        setTimeout(() => {
+            try {
+                const opened = window.open(url);
+                if (!opened) {
+                    location.href = url;
+                }
+            } catch (e) {}
+        }, 300);
+
+        // 🧹 释放内存
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 5000);
+
+        // ✅ 用户提示（非常重要）
+        showToast('✅ 已导出到 Download 文件夹');
+
+    } catch (err) {
+        console.error(err);
+
+        // 🥉 终极兜底（绝不会失败）
+        try {
+            const text = JSON.stringify({
+                menstrualData,
+                symptomsList,
+                uiSettings
+            }, null, 2);
+
+            navigator.clipboard.writeText(text);
+            alert('导出失败，已复制到剪贴板，请手动保存');
+        } catch (e) {
+            alert('导出失败，请联系开发者');
+        }
+    }
+}
     function importData() { let input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = (e) => { let file = e.target.files[0]; let reader = new FileReader(); reader.onload = (ev) => { try { let data = JSON.parse(ev.target.result); if(data.menstrualData) menstrualData = data.menstrualData; if(data.symptomsList) symptomsList = data.symptomsList; if(data.uiSettings) uiSettings = {...uiSettings, ...data.uiSettings}; saveAll(); renderCalendar(); showToast('导入成功'); } catch(e) { showToast('文件错误'); } }; reader.readAsText(file); }; input.click(); }
     function clearAllData() { if(confirm('⚠️ 永久删除所有月经记录和备注，不可恢复！')) { menstrualData = {}; saveAll(); renderCalendar(); showToast('已清空所有数据'); } }
     function manageSymptoms() { 
