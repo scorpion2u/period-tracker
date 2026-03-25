@@ -701,7 +701,6 @@
     let selectedDate = getTodayStr();
     let touchStartX = 0;
     let sakuraAnimation = null;
-    let exporting = false;
 
     let uiSettings = {
         cardRadius: 20,
@@ -1220,68 +1219,7 @@ function showInput(title, placeholder, defaultValue, onSubmit) {
         modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
     }
     
-    async function exportData() {
-
-    // ✅ 防重复点击
-    if (exporting) return;
-    exporting = true;
-
-    try {
-        let backup = {
-            menstrualData,
-            symptomsList,
-            uiSettings
-        };
-
-        let dataStr = JSON.stringify(backup, null, 2);
-        let fileName = `经期备份_${new Date().toISOString().slice(0,10)}.json`;
-
-        let blob = new Blob(
-            ["\uFEFF" + dataStr],
-            { type: 'application/json;charset=utf-8' }
-        );
-
-        let file = new File([blob], fileName, { type: 'application/json' });
-
-        // ✅ 1. 分享
-        if (navigator.share && navigator.canShare) {
-    try {
-        if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                title: '经期备份',
-                text: '我的经期记录备份',
-                files: [file]
-            });
-            showToast('📤 请选择保存到文件/下载');
-            return;
-        }
-    } catch (err) {}
-}
-
-        // ✅ 2. 原生桥接
-        if (window.Android && window.Android.saveFile) {
-            window.Android.saveFile(fileName, "\uFEFF" + dataStr);
-            showToast('✅ 已保存到 Download');
-            return;
-        }
-
-        // ✅ 3. 浏览器兜底
-        let url = URL.createObjectURL(blob);
-        let link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.click();
-        URL.revokeObjectURL(url);
-
-        showToast('📥 已下载');
-
-    } catch (e) {
-        showToast('导出失败');
-    } finally {
-        // ✅ 解锁
-        setTimeout(() => exporting = false, 1000);
-    }
-}
+    function exportData() { let backup = { menstrualData, symptomsList, uiSettings }; let blob = new Blob([JSON.stringify(backup)], {type:'application/json'}); let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `月经记录_${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('导出成功'); }
     function importData() { let input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = (e) => { let file = e.target.files[0]; let reader = new FileReader(); reader.onload = (ev) => { try { let data = JSON.parse(ev.target.result); if(data.menstrualData) menstrualData = data.menstrualData; if(data.symptomsList) symptomsList = data.symptomsList; if(data.uiSettings) uiSettings = {...uiSettings, ...data.uiSettings}; saveAll(); renderCalendar(); showToast('导入成功'); } catch(e) { showToast('文件错误'); } }; reader.readAsText(file); }; input.click(); }
     function clearAllData() {
     showConfirm('⚠️ 永久删除所有月经记录和备注，不可恢复！', () => {
