@@ -621,6 +621,24 @@
         }
         button { font-family: inherit; }
     </style>
+    <link rel="manifest" href="/manifest.json">
+<script>
+// 注册 Service Worker（放在所有其他 script 之前）
+if ('serviceWorker' in navigator) {
+  // 可选：先检查 sw.js 是否存在
+  fetch('/sw.js', { method: 'HEAD' })
+    .then(res => {
+      if (res.ok) {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('✅ SW 注册成功', reg))
+          .catch(err => console.log('❌ SW 注册失败', err));
+      } else {
+        console.log('⚠️ sw.js 文件不存在，跳过注册');
+      }
+    })
+    .catch(() => console.log('⚠️ 无法检查 sw.js，跳过注册'));
+}
+</script>
 </head>
 <body>
 <div class="container">
